@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karl Lotze – Bildarchiv</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ─────────────────────────────────────────────────────────────
+  // SCHRITT 1: Trage hier deine Firebase-Konfiguration ein.
+  // Du findest sie in der Firebase-Konsole unter:
+  // Projekteinstellungen → Deine Apps → Firebase SDK-Snippet
+  // ─────────────────────────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey:            "AIzaSyD1d2MISPlyp7AEj4AEkQ7fI5ePv-xptjs",
+    authDomain:        "karl-lotze-bilder.firebaseapp.com",
+    projectId:         "karl-lotze-bilder",
+    storageBucket:     "karl-lotze-bilder.firebasestorage.app",
+    messagingSenderId: "758265664188",
+    appId:             "1:758265664188:web:ff3a0a05dab000dadf36b9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window._db = db;
+
+  // ─────────────────────────────────────────────────────────────
+  // SCHRITT 2: Bilderdaten – hier pflegst du alle Bilder.
+  // Felder: id, descr, groesse, jahr, foto, status
+  //   status: "aktiv"    → wird angezeigt
+  //           "vergeben" → ausgeblendet (vom Admin gesetzt)
+  // ─────────────────────────────────────────────────────────────
+  window._bilder = [
+    { id: "b01", descr: "Karl im Garten, Sommer",      groesse: "30×40 cm", jahr: "1952", foto: "fotos/b01.jpg", status: "aktiv" },
+    { id: "b02", descr: "Porträt mit Pfeife",           groesse: "20×30 cm", jahr: "1958", foto: "fotos/b02.jpg", status: "aktiv" },
+    { id: "b03", descr: "Familienausflug Ostsee",       groesse: "40×50 cm", jahr: "1961", foto: "fotos/b03.jpg", status: "aktiv" },
+    { id: "b04", descr: "Weihnachten, Wohnzimmer",      groesse: "25×35 cm", jahr: "1965", foto: "fotos/b04.jpg", status: "aktiv" },
+    { id: "b05", descr: "Hochzeitstag",                 groesse: "30×40 cm", jahr: "1948", foto: "fotos/b05.jpg", status: "aktiv" },
+    // → weitere Bilder nach demselben Schema einfügen
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // SCHRITT 3: Admin-Passwort – ändern!
+  // ─────────────────────────────────────────────────────────────
+  window._adminPasswort = "lotze2024";
+
+  // ── ab hier nichts mehr ändern ────────────────────────────────
+
+  window._currentUser = null;
+
+  // Gibt alle Interessenten für alle Bilder zurück (live)
+  window._listenInteressen = (callback) => {
+    return onSnapshot(collection(db, "interessen"), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data(); });
+      callback(data);
+    });
+  };
+
+  // Interesse eines Nutzers an einem Bild togglen
+  window._toggleInteresse = async (bildId, nutzername) => {
+    const ref = doc(db, "interessen", bildId);
+    const snap = await getDoc(ref);
+    let interessenten = snap.exists() ? (snap.data().nutzer || []) : [];
+    if (interessenten.includes(nutzername)) {
+      interessenten = interessenten.filter(n => n !== nutzername);
+    } else {
+      interessenten.push(nutzername);
+    }
+    await setDoc(ref, { nutzer: interessenten }, { merge: true });
+  };
+
+  // Admin: Bild als vergeben markieren (nur lokal, du musst HTML-Datei dann anpassen)
+  window._markiereVergeben = async (bildId) => {
+    // Speichert den Status auch in Firestore als Referenz
+    await setDoc(doc(db, "status", bildId), { status: "vergeben" }, { merge: true });
+  };
+
+  window._ladeStatus = async (callback) => {
+    return onSnapshot(collection(db, "status"), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data().status; });
+      callback(data);
+    });
+  };
+
+</script>
+
+<style>
+  /* ── Typografie & Tokens ── */
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+  :root {
+    --cream:   #f5f0e8;
+    --sepia:   #c8a97a;
+    --dark:    #1a1410;
+    --mid:     #5c4a35;
+    --light:   #e8e0d0;
+    --accent:  #8b2020;
+    --vergeben:#9a9a9a;
+    --shadow:  0 4px 24px rgba(26,20,16,0.15);
+    --radius:  4px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--dark);
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* ── Kopfzeile ── */
+  header {
+    background: var(--dark);
+    color: var(--cream);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+    border-bottom: 3px solid var(--sepia);
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+  header p {
+    margin-top: 0.5rem;
+    color: var(--sepia);
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #adminLink {
+    position: absolute;
+    top: 1rem; right: 1.2rem;
+    font-size: 0.75rem;
+    color: var(--mid);
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity .2s;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+  }
+  #adminLink:hover { opacity: 1; }
+
+  /* ── Login-Bereich ── */
+  #loginBereich {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+    gap: 1.2rem;
+  }
+  #loginBereich h2 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 400;
+    font-size: 1.6rem;
+    color: var(--mid);
+  }
+  #loginBereich p {
+    color: var(--mid);
+    font-size: 0.95rem;
+    max-width: 400px;
+    text-align: center;
+    line-height: 1.6;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    max-width: 320px;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--sepia);
+    border-radius: var(--radius);
+    background: white;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--dark);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139,32,32,0.1);
+  }
+  button {
+    padding: 0.75rem 2rem;
+    background: var(--dark);
+    color: var(--cream);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+  }
+  button:hover  { background: var(--mid); }
+  button:active { transform: scale(0.98); }
+
+  /* ── Galerie ── */
+  #galerie { display: none; padding: 2rem; }
+
+  #nutzerbanner {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--mid);
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+  #nutzerbanner strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .runden-info {
+    max-width: 700px;
+    margin: 0 auto 2rem;
+    padding: 1rem 1.5rem;
+    background: var(--light);
+    border-left: 3px solid var(--sepia);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  #bildGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.8rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .bildKarte {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+    position: relative;
+  }
+  .bildKarte:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 36px rgba(26,20,16,0.2);
+  }
+  .bildKarte.vergeben {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .bildKarte.vergeben::after {
+    content: "Vergeben";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(-15deg);
+    background: var(--vergeben);
+    color: white;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    padding: 0.3rem 1.2rem;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .bildKarte img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    background: var(--light);
+  }
+
+  .bildInfo {
+    padding: 1rem 1.1rem 0.8rem;
+  }
+  .bildDescr {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-bottom: 0.4rem;
+  }
+  .bildMeta {
+    font-size: 0.8rem;
+    color: var(--mid);
+    letter-spacing: 0.04em;
+  }
+
+  .bildFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 1.1rem;
+    border-top: 1px solid var(--light);
+    gap: 0.5rem;
+  }
+
+  .interessenten {
+    font-size: 0.8rem;
+    color: var(--mid);
+    flex: 1;
+    line-height: 1.4;
+  }
+  .interessenten .namen {
+    color: var(--dark);
+    font-weight: 600;
+  }
+  .interessenten .leer {
+    font-style: italic;
+    opacity: 0.6;
+  }
+
+  .herzBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid var(--light);
+    color: var(--mid);
+    font-size: 1.1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background .2s, border-color .2s, transform .15s;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .herzBtn:hover { background: var(--light); border-color: var(--sepia); }
+  .herzBtn.aktiv {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+    transform: scale(1.12);
+  }
+
+  /* ── Admin-Panel ── */
+  #adminPanel {
+    display: none;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  #adminPanel h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    margin-bottom: 0.3rem;
+    color: var(--dark);
+  }
+  #adminPanel .sub {
+    color: var(--mid);
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+  .adminTabelle {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 0.9rem;
+  }
+  .adminTabelle th {
+    background: var(--dark);
+    color: var(--cream);
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+  }
+  .adminTabelle td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--light);
+    vertical-align: middle;
+  }
+  .adminTabelle tr:last-child td { border-bottom: none; }
+  .adminTabelle tr.vergeben td { opacity: 0.5; background: var(--light); }
+
+  .tagBadge {
+    display: inline-block;
+    background: var(--light);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.78rem;
+    color: var(--dark);
+    margin: 0.1rem;
+  }
+  .tagBadge.konflikt { background: #fce4b3; }
+
+  .btnVergeben {
+    background: var(--accent);
+    font-size: 0.78rem;
+    padding: 0.4rem 0.9rem;
+    white-space: nowrap;
+  }
+  .btnVergeben:hover { background: #6b1818; }
+  .btnReaktivieren {
+    background: var(--mid);
+    font-size: 0.78rem;
+    padding: 0.4rem 0.9rem;
+    white-space: nowrap;
+  }
+
+  .adminHinweis {
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    background: #fef9f0;
+    border: 1px solid var(--sepia);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--mid);
+    line-height: 1.7;
+  }
+  .adminHinweis strong { color: var(--dark); }
+
+  .zurueckBtn {
+    background: transparent;
+    border: 1.5px solid var(--mid);
+    color: var(--mid);
+    margin-bottom: 1.5rem;
+    font-size: 0.82rem;
+  }
+  .zurueckBtn:hover { background: var(--light); }
+
+  /* ── Admin-Login ── */
+  #adminLogin { display: none; }
+
+  /* ── Fehlermeldung ── */
+  .fehler {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 500px) {
+    #bildGrid { grid-template-columns: 1fr; }
+    .adminTabelle { font-size: 0.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Karl Lotze</h1>
+  <p>Familienbildarchiv · Bildauswahl</p>
+  <a id="adminLink" onclick="zeigeAdminLogin()">&#9881;</a>
+</header>
+
+<!-- ── Login ── -->
+<div id="loginBereich">
+  <h2>Willkommen</h2>
+  <p>Bitte gib deinen Namen ein, damit wir deine Auswahl zuordnen können.</p>
+  <input type="text" id="nameInput" placeholder="Dein Vorname" maxlength="40"
+         onkeydown="if(event.key==='Enter') login()">
+  <button onclick="login()">Weiter zur Galerie</button>
+  <span id="loginFehler" class="fehler"></span>
+</div>
+
+<!-- ── Admin-Login ── -->
+<div id="adminLogin">
+  <div id="loginBereich" style="display:flex">
+    <h2>Admin-Zugang</h2>
+    <input type="password" id="adminPwInput" placeholder="Passwort"
+           onkeydown="if(event.key==='Enter') adminLogin()">
+    <button onclick="adminLogin()">Anmelden</button>
+    <a style="color:var(--mid);cursor:pointer;font-size:0.85rem" onclick="zeigeLogin()">← Zurück</a>
+    <span id="adminFehler" class="fehler"></span>
+  </div>
+</div>
+
+<!-- ── Galerie ── -->
+<div id="galerie">
+  <div id="nutzerbanner">Angemeldet als <strong id="nutzerName"></strong> &nbsp;·&nbsp;
+    <a style="cursor:pointer;color:var(--mid);font-size:0.85rem" onclick="abmelden()">Abmelden</a>
+  </div>
+  <div class="runden-info">
+    Klicke auf das Herz ♡ bei jedem Bild, das dich interessiert. Deine Auswahl wird sofort gespeichert.
+    Du siehst auch, wer sonst Interesse bekundet hat. Bilder, für die ein eindeutiger Empfänger gefunden wurde,
+    werden nach der Runde als <em>Vergeben</em> markiert.
+  </div>
+  <div id="bildGrid"></div>
+</div>
+
+<!-- ── Admin-Panel ── -->
+<div id="adminPanel">
+  <button class="zurueckBtn" onclick="zeigeLogin()">← Zurück zur Galerie</button>
+  <h2>Adminansicht</h2>
+  <p class="sub">Übersicht aller Bilder mit Interessenten. Vergib Bilder nach jeder Runde.</p>
+  <table class="adminTabelle">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Bild</th>
+        <th>Beschreibung</th>
+        <th>Größe / Jahr</th>
+        <th>Interessenten</th>
+        <th>Aktion</th>
+      </tr>
+    </thead>
+    <tbody id="adminTabBody"></tbody>
+  </table>
+  <div class="adminHinweis">
+    <strong>Wichtig nach dem Markieren:</strong> Wenn du ein Bild als „Vergeben" markierst, wird es sofort
+    in Firestore gespeichert und für alle Nutzer ausgegraut. Um ein Bild dauerhaft aus der nächsten Runde
+    zu entfernen, ändere seinen <code>status</code> in der <code>window._bilder</code>-Liste
+    am Anfang der HTML-Datei auf <code>"vergeben"</code>, dann push die Datei neu auf GitHub.
+  </div>
+</div>
+
+<script>
+// ── Zustandsvariablen ──────────────────────────────────────────
+let _interessen   = {};  // { bildId: { nutzer: ["Anna","Bob"] } }
+let _statusDB     = {};  // { bildId: "vergeben" }
+let _unsubInter   = null;
+let _unsubStatus  = null;
+
+// ── Hilfsfunktionen ───────────────────────────────────────────
+function zeige(id)   { document.getElementById(id).style.display = ''; }
+function verberge(id){ document.getElementById(id).style.display = 'none'; }
+
+function zeigeLogin() {
+  verberge('galerie');
+  verberge('adminPanel');
+  verberge('adminLogin');
+  document.getElementById('loginBereich').style.display = 'flex';
+}
+function zeigeAdminLogin() {
+  document.getElementById('loginBereich').style.display = 'none';
+  verberge('galerie');
+  verberge('adminPanel');
+  document.getElementById('adminLogin').style.display = 'block';
+  // Der innere loginBereich in adminLogin:
+  document.querySelector('#adminLogin #loginBereich') &&
+    (document.querySelector('#adminLogin #loginBereich').style.display = 'flex');
+}
+
+function login() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) {
+    document.getElementById('loginFehler').textContent = 'Bitte gib deinen Namen ein.';
+    return;
+  }
+  window._currentUser = name;
+  document.getElementById('nutzerName').textContent = name;
+  document.getElementById('loginBereich').style.display = 'none';
+  document.getElementById('galerie').style.display = 'block';
+  starteGalerie();
+}
+
+function abmelden() {
+  window._currentUser = null;
+  if (_unsubInter)  { _unsubInter();  _unsubInter  = null; }
+  if (_unsubStatus) { _unsubStatus(); _unsubStatus = null; }
+  document.getElementById('galerie').style.display = 'none';
+  document.getElementById('loginBereich').style.display = 'flex';
+  document.getElementById('nameInput').value = '';
+}
+
+function adminLogin() {
+  const pw = document.getElementById('adminPwInput').value;
+  if (pw !== window._adminPasswort) {
+    document.getElementById('adminFehler').textContent = 'Falsches Passwort.';
+    return;
+  }
+  document.getElementById('adminLogin').style.display = 'none';
+  document.getElementById('adminPanel').style.display = 'block';
+  starteAdmin();
+}
+
+// ── Galerie aufbauen ──────────────────────────────────────────
+function starteGalerie() {
+  const grid = document.getElementById('bildGrid');
+  grid.innerHTML = '';
+
+  window._bilder.forEach(b => {
+    const karte = document.createElement('div');
+    karte.className = 'bildKarte';
+    karte.id = 'karte_' + b.id;
+    if (b.status === 'vergeben') karte.classList.add('vergeben');
+
+    karte.innerHTML = `
+      <img src="${b.foto}" alt="${b.descr}" loading="lazy"
+           onerror="this.style.background='#e8e0d0';this.alt='Bild nicht gefunden'">
+      <div class="bildInfo">
+        <div class="bildDescr">${b.descr}</div>
+        <div class="bildMeta">${b.groesse} &nbsp;·&nbsp; ${b.jahr}</div>
+      </div>
+      <div class="bildFooter">
+        <div class="interessenten" id="inter_${b.id}">
+          <span class="leer">Noch kein Interesse</span>
+        </div>
+        <button class="herzBtn" id="herz_${b.id}"
+                onclick="toggleInteresse('${b.id}')">♡</button>
+      </div>`;
+    grid.appendChild(karte);
+  });
+
+  // Live-Listener
+  _unsubInter = window._listenInteressen(data => {
+    _interessen = data;
+    aktualisiereGalerieUI();
+  });
+  _unsubStatus = window._ladeStatus(data => {
+    _statusDB = data;
+    aktualisiereStatusUI();
+  });
+}
+
+function aktualisiereGalerieUI() {
+  const user = window._currentUser;
+  window._bilder.forEach(b => {
+    const nutzer = (_interessen[b.id] && _interessen[b.id].nutzer) || [];
+    const interEl = document.getElementById('inter_' + b.id);
+    const herzEl  = document.getElementById('herz_'  + b.id);
+    if (!interEl || !herzEl) return;
+
+    if (nutzer.length === 0) {
+      interEl.innerHTML = '<span class="leer">Noch kein Interesse</span>';
+    } else {
+      interEl.innerHTML = `<span class="namen">${nutzer.join(', ')}</span>`;
+    }
+
+    const meins = nutzer.includes(user);
+    herzEl.textContent = meins ? '♥' : '♡';
+    herzEl.classList.toggle('aktiv', meins);
+  });
+}
+
+function aktualisiereStatusUI() {
+  window._bilder.forEach(b => {
+    const karte = document.getElementById('karte_' + b.id);
+    if (!karte) return;
+    const vergeben = b.status === 'vergeben' || _statusDB[b.id] === 'vergeben';
+    karte.classList.toggle('vergeben', vergeben);
+  });
+}
+
+async function toggleInteresse(bildId) {
+  if (!window._currentUser) return;
+  await window._toggleInteresse(bildId, window._currentUser);
+}
+
+// ── Admin-Panel aufbauen ──────────────────────────────────────
+function starteAdmin() {
+  // Listener falls noch nicht aktiv
+  if (!_unsubInter) {
+    _unsubInter = window._listenInteressen(data => {
+      _interessen = data;
+      aktualisiereAdminUI();
+    });
+  }
+  if (!_unsubStatus) {
+    _unsubStatus = window._ladeStatus(data => {
+      _statusDB = data;
+      aktualisiereAdminUI();
+    });
+  }
+  aktualisiereAdminUI();
+}
+
+function aktualisiereAdminUI() {
+  const tbody = document.getElementById('adminTabBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  window._bilder.forEach((b, i) => {
+    const nutzer   = (_interessen[b.id] && _interessen[b.id].nutzer) || [];
+    const vergeben = b.status === 'vergeben' || _statusDB[b.id] === 'vergeben';
+    const konflikt = nutzer.length > 1;
+
+    const tr = document.createElement('tr');
+    if (vergeben) tr.classList.add('vergeben');
+
+    const badges = nutzer.length === 0
+      ? '<span style="opacity:.5;font-style:italic">–</span>'
+      : nutzer.map(n => `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}</span>`).join('');
+
+    const btn = vergeben
+      ? `<button class="btnReaktivieren" onclick="reaktiviere('${b.id}')">Reaktivieren</button>`
+      : `<button class="btnVergeben"     onclick="vergebeAdmin('${b.id}')">Vergeben</button>`;
+
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td><img src="${b.foto}" style="width:60px;height:45px;object-fit:cover;border-radius:2px;background:var(--light)"
+               onerror="this.style.background='#ddd'"></td>
+      <td>${b.descr}</td>
+      <td style="white-space:nowrap">${b.groesse}<br><small>${b.jahr}</small></td>
+      <td>${badges}</td>
+      <td>${vergeben ? '<em style="opacity:.5">Vergeben</em>' : btn}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function vergebeAdmin(bildId) {
+  if (!confirm('Dieses Bild als „Vergeben" markieren?')) return;
+  await window._markiereVergeben(bildId);
+}
+
+async function reaktiviere(bildId) {
+  // Löscht den vergeben-Status aus Firestore
+  const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await deleteDoc(doc(window._db, "status", bildId));
+}
+</script>
+</body>
+</html>
