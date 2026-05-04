@@ -110,6 +110,17 @@
     }
   };
 
+  // Sichtbarkeits-Modus: "abstimmung" (Standard) oder "auswertung"
+  window._listenModus = (callback) => {
+    return onSnapshot(doc(db, "einstellungen", "modus"), (snap) => {
+      const modus = snap.exists() ? (snap.data().modus || "abstimmung") : "abstimmung";
+      callback(modus);
+    });
+  };
+  window._setzeModus = async (modus) => {
+    await setDoc(doc(db, "einstellungen", "modus"), { modus });
+  };
+
   window._listenLieblinge = (callback) => {
     return onSnapshot(collection(db, "lieblinge"), (snap) => {
       const data = {};
@@ -622,10 +633,9 @@
   </div>
   <div class="runden-info">
     <strong>Interesse:</strong> Klicke auf ♡ um ein Bild zu markieren – nochmals klicken hebt die Markierung auf.<br>
-    <strong>Lieblingsbild:</strong> Doppelklicke auf ♡ oder ♥ um dein Lieblingsbild zu wählen (♥♥ gold) – nur eines möglich.
-    Nochmals doppelklicken macht es rückgängig.<br>
-    <strong>Vergrößern:</strong> Klicke auf das Bild selbst, um es groß anzuzeigen.
-    Bilder, für die ein eindeutiger Empfänger gefunden wurde, werden als <em>Vergeben</em> markiert.
+    <strong>Lieblingsbild:</strong> Doppelklicke auf ♡ oder ♥ um dein Lieblingsbild zu wählen (♥♥ gold) – nur eines möglich. Nochmals doppelklicken macht es rückgängig.<br>
+    <strong>Vergrößern:</strong> Klicke auf das Bild selbst, um es groß anzuzeigen.<br>
+    <strong>Hinweis:</strong> Deine Auswahl wird gespeichert, aber erst nach Abschluss der Runde für alle sichtbar gemacht.
   </div>
   <div id="bildGrid"></div>
 </div>
@@ -635,6 +645,14 @@
   <button class="zurueckBtn" onclick="zeigeLogin()">← Zurück zur Galerie</button>
   <h2>Adminansicht</h2>
   <p class="sub">Übersicht aller Bilder mit Interessenten. Vergib Bilder nach jeder Runde.</p>
+
+  <div id="modusBox" style="margin-bottom:1.8rem; padding:1.2rem 1.5rem; background:white; border:1px solid var(--sepia); border-radius:var(--radius); display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.25rem;">Sichtbarkeits-Modus</div>
+      <div id="modusText" style="font-size:0.85rem; color:var(--mid);"></div>
+    </div>
+    <button id="modusBtn" onclick="wechsleModus()" style="white-space:nowrap; padding:0.6rem 1.4rem; font-size:0.85rem;"></button>
+  </div>
   <table class="adminTabelle">
     <thead>
       <tr>
@@ -649,10 +667,11 @@
     <tbody id="adminTabBody"></tbody>
   </table>
   <div class="adminHinweis">
-    <strong>Wichtig nach dem Markieren:</strong> Wenn du ein Bild als „Vergeben" markierst, wird es sofort
-    in Firestore gespeichert und für alle Nutzer ausgegraut. Um ein Bild dauerhaft aus der nächsten Runde
-    zu entfernen, ändere seinen <code>status</code> in der <code>window._bilder</code>-Liste
-    am Anfang der HTML-Datei auf <code>"vergeben"</code>, dann push die Datei neu auf GitHub.
+    <strong>Vergeben markieren:</strong> Ein als „Vergeben" markiertes Bild verschwindet sofort aus der Galerie aller Nutzer.
+    Um es dauerhaft aus der nächsten Runde zu entfernen, ändere <code>status</code> in <code>window._bilder</code>
+    auf <code>"vergeben"</code> und push die Datei neu auf GitHub.<br><br>
+    <strong>Sichtbarkeits-Modus:</strong> Im Abstimmungs-Modus sieht jeder Nutzer nur seine eigene Auswahl.
+    Erst wenn du auf „Auswertung freigeben" klickst, werden alle Präferenzen für alle sichtbar.
   </div>
 </div>
 
@@ -670,9 +689,11 @@
 let _interessen   = {};  // { bildId: { nutzer: ["Anna","Bob"] } }
 let _statusDB     = {};  // { bildId: "vergeben" }
 let _lieblinge    = {};  // { nutzername: bildId }
+let _modus        = "abstimmung";  // "abstimmung" oder "auswertung"
 let _unsubInter   = null;
 let _unsubStatus  = null;
 let _unsubLieb    = null;
+let _unsubModus   = null;
 
 // ── Hilfsfunktionen ───────────────────────────────────────────
 function zeige(id)   { document.getElementById(id).style.display = ''; }
@@ -712,6 +733,7 @@ function abmelden() {
   if (_unsubInter)  { _unsubInter();  _unsubInter  = null; }
   if (_unsubStatus) { _unsubStatus(); _unsubStatus = null; }
   if (_unsubLieb)   { _unsubLieb();   _unsubLieb   = null; }
+  if (_unsubModus)  { _unsubModus();  _unsubModus  = null; }
   document.getElementById('galerie').style.display = 'none';
   document.getElementById('loginBereich').style.display = 'flex';
   document.getElementById('nameInput').value = '';
@@ -734,10 +756,10 @@ function starteGalerie() {
   grid.innerHTML = '';
 
   window._bilder.forEach(b => {
+    if (b.status === 'vergeben') return;  // Vergebene Bilder gar nicht rendern
     const karte = document.createElement('div');
     karte.className = 'bildKarte';
     karte.id = 'karte_' + b.id;
-    if (b.status === 'vergeben') karte.classList.add('vergeben');
 
     karte.innerHTML = `
       <img src="${b.foto}" alt="${b.descr}" loading="lazy"
@@ -771,6 +793,10 @@ function starteGalerie() {
     _lieblinge = data;
     aktualisiereGalerieUI();
   });
+  _unsubModus = window._listenModus(m => {
+    _modus = m;
+    aktualisiereGalerieUI();
+  });
 }
 
 function aktualisiereGalerieUI() {
@@ -781,10 +807,14 @@ function aktualisiereGalerieUI() {
     const herzEl  = document.getElementById('herz_'  + b.id);
     if (!interEl || !herzEl) return;
 
-    if (nutzer.length === 0) {
-      interEl.innerHTML = '<span class="leer">Noch kein Interesse</span>';
+    // Im Abstimmungs-Modus: nur eigene Auswahl anzeigen
+    const sichtbar = _modus === "auswertung" ? nutzer : nutzer.filter(n => n === user);
+    if (sichtbar.length === 0) {
+      interEl.innerHTML = _modus === "abstimmung" && nutzer.length > 0
+        ? '<span class="leer" style="font-style:italic;opacity:0.5">Abstimmung läuft…</span>'
+        : '<span class="leer">Noch kein Interesse</span>';
     } else {
-      const namen = nutzer.map(n => {
+      const namen = sichtbar.map(n => {
         const istLiebling = _lieblinge[n] === b.id;
         return istLiebling ? `<span style="color:#b8860b;font-weight:600">${n} ♥♥</span>` : n;
       }).join(', ');
@@ -812,8 +842,9 @@ function aktualisiereStatusUI() {
   window._bilder.forEach(b => {
     const karte = document.getElementById('karte_' + b.id);
     if (!karte) return;
-    const vergeben = b.status === 'vergeben' || _statusDB[b.id] === 'vergeben';
-    karte.classList.toggle('vergeben', vergeben);
+    const vergeben = _statusDB[b.id] === 'vergeben';
+    // Wenn in Firestore als vergeben markiert: Karte ausblenden
+    karte.style.display = vergeben ? 'none' : '';
   });
 }
 
@@ -844,7 +875,15 @@ function starteAdmin() {
       aktualisiereAdminUI();
     });
   }
+  if (!_unsubModus) {
+    _unsubModus = window._listenModus(m => {
+      _modus = m;
+      aktualisiereGalerieUI();
+      aktualisiereModusUI();
+    });
+  }
   aktualisiereAdminUI();
+  aktualisiereModusUI();
 }
 
 function aktualisiereAdminUI() {
@@ -881,6 +920,26 @@ function aktualisiereAdminUI() {
       <td>${vergeben ? '<em style="opacity:.5">Vergeben</em>' : btn}</td>`;
     tbody.appendChild(tr);
   });
+}
+
+function aktualisiereModusUI() {
+  const btn  = document.getElementById('modusBtn');
+  const text = document.getElementById('modusText');
+  if (!btn || !text) return;
+  if (_modus === 'abstimmung') {
+    text.textContent = 'Abstimmungsphase: Nutzer sehen nur ihre eigene Auswahl.';
+    btn.textContent  = 'Auswertung freigeben →';
+    btn.style.background = '#2d6a2d';
+  } else {
+    text.textContent = 'Auswertungsphase: Alle Präferenzen sind für alle sichtbar.';
+    btn.textContent  = '← Zurück zur Abstimmung';
+    btn.style.background = 'var(--accent)';
+  }
+}
+
+async function wechsleModus() {
+  const neuerModus = _modus === 'abstimmung' ? 'auswertung' : 'abstimmung';
+  await window._setzeModus(neuerModus);
 }
 
 async function vergebeAdmin(bildId) {
