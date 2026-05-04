@@ -939,10 +939,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape')     lbSchliessen();
 });
 
-  // Löscht den vergeben-Status aus Firestore
-  const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-  await deleteDoc(doc(window._db, "status", bildId));
-}
+
 </script>
 </body>
 </html>
