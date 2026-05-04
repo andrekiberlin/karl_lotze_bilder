@@ -621,9 +621,11 @@
     <a style="cursor:pointer;color:var(--mid);font-size:0.85rem" onclick="abmelden()">Abmelden</a>
   </div>
   <div class="runden-info">
-    Klicke auf das Herz ♡ bei jedem Bild, das dich interessiert. Deine Auswahl wird sofort gespeichert.
-    Du siehst auch, wer sonst Interesse bekundet hat. Bilder, für die ein eindeutiger Empfänger gefunden wurde,
-    werden nach der Runde als <em>Vergeben</em> markiert.
+    <strong>Interesse:</strong> Klicke auf ♡ um ein Bild zu markieren – nochmals klicken hebt die Markierung auf.<br>
+    <strong>Lieblingsbild:</strong> Doppelklicke auf ♡ oder ♥ um dein Lieblingsbild zu wählen (♥♥ gold) – nur eines möglich.
+    Nochmals doppelklicken macht es rückgängig.<br>
+    <strong>Vergrößern:</strong> Klicke auf das Bild selbst, um es groß anzuzeigen.
+    Bilder, für die ein eindeutiger Empfänger gefunden wurde, werden als <em>Vergeben</em> markiert.
   </div>
   <div id="bildGrid"></div>
 </div>
@@ -817,6 +819,8 @@ function aktualisiereStatusUI() {
 
 async function toggleInteresse(bildId) {
   if (!window._currentUser) return;
+  // Kein einfacher Klick wenn dieses Bild bereits Lieblingsbild ist
+  if (_lieblinge[window._currentUser] === bildId) return;
   await window._toggleInteresse(bildId, window._currentUser);
 }
 
