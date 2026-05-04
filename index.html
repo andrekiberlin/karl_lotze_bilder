@@ -89,6 +89,35 @@
     await setDoc(doc(db, "status", bildId), { status: "vergeben" }, { merge: true });
   };
 
+  // Lieblingsbild setzen/entfernen (pro Nutzer nur eines)
+  window._toggleLiebling = async (bildId, nutzername) => {
+    const ref = doc(db, "lieblinge", nutzername);
+    const snap = await getDoc(ref);
+    const aktuell = snap.exists() ? snap.data().bildId : null;
+    if (aktuell === bildId) {
+      // nochmal Doppelklick → Liebling entfernen, aber Interesse bleibt
+      await setDoc(ref, { bildId: null }, { merge: true });
+    } else {
+      await setDoc(ref, { bildId: bildId }, { merge: true });
+      // Sicherstellen dass das Bild auch als "Interesse" markiert ist
+      const intRef = doc(db, "interessen", bildId);
+      const intSnap = await getDoc(intRef);
+      let nutzer = intSnap.exists() ? (intSnap.data().nutzer || []) : [];
+      if (!nutzer.includes(nutzername)) {
+        nutzer.push(nutzername);
+        await setDoc(intRef, { nutzer }, { merge: true });
+      }
+    }
+  };
+
+  window._listenLieblinge = (callback) => {
+    return onSnapshot(collection(db, "lieblinge"), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data().bildId; });
+      callback(data);
+    });
+  };
+
   window._ladeStatus = async (callback) => {
     return onSnapshot(collection(db, "status"), (snap) => {
       const data = {};
@@ -358,6 +387,15 @@
     color: white;
     transform: scale(1.12);
   }
+  .herzBtn.liebling {
+    background: #b8860b;
+    border-color: #b8860b;
+    color: #fff8e0;
+    transform: scale(1.18);
+    font-size: 0.85rem;
+    letter-spacing: -0.05em;
+  }
+  .herzBtn.liebling:hover { background: #9a7009; }
 
   /* ── Admin-Panel ── */
   #adminPanel {
@@ -467,6 +505,84 @@
     #bildGrid { grid-template-columns: 1fr; }
     .adminTabelle { font-size: 0.8rem; }
   }
+
+  /* ── Lightbox ── */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,8,6,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+  #lightbox.aktiv { display: flex; }
+
+  #lbImg {
+    max-width: 90vw;
+    max-height: 78vh;
+    object-fit: contain;
+    border: 2px solid var(--sepia);
+    box-shadow: 0 8px 60px rgba(0,0,0,0.7);
+    display: block;
+    border-radius: 2px;
+  }
+  #lbInfo {
+    margin-top: 1rem;
+    text-align: center;
+    color: var(--cream);
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-style: italic;
+    opacity: 0.85;
+  }
+  #lbInfo small {
+    font-family: 'Source Sans 3', sans-serif;
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--sepia);
+    margin-left: 0.5rem;
+  }
+  #lbSchliessen {
+    position: fixed;
+    top: 1.2rem; right: 1.5rem;
+    font-size: 2rem;
+    color: var(--sepia);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    transition: color .2s;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  #lbSchliessen:hover { color: var(--cream); background: none; }
+
+  .lbPfeil {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.5rem;
+    color: var(--sepia);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    line-height: 1;
+    transition: color .2s;
+    text-transform: none;
+    letter-spacing: 0;
+    user-select: none;
+  }
+  .lbPfeil:hover { color: var(--cream); background: none; }
+  #lbVorige { left: 0.5rem; }
+  #lbNaechste { right: 0.5rem; }
+
+  /* Lupen-Cursor auf Bildkarten */
+  .bildKarte:not(.vergeben) img { cursor: zoom-in; }
 </style>
 </head>
 <body>
@@ -538,12 +654,23 @@
   </div>
 </div>
 
+<!-- ── Lightbox ── -->
+<div id="lightbox" onclick="lbHintergrundKlick(event)">
+  <button id="lbSchliessen" onclick="lbSchliessen()">×</button>
+  <button class="lbPfeil" id="lbVorige"   onclick="lbBlättern(-1)">&#8249;</button>
+  <img id="lbImg" src="" alt="">
+  <div id="lbInfo"></div>
+  <button class="lbPfeil" id="lbNaechste" onclick="lbBlättern(+1)">&#8250;</button>
+</div>
+
 <script>
 // ── Zustandsvariablen ──────────────────────────────────────────
 let _interessen   = {};  // { bildId: { nutzer: ["Anna","Bob"] } }
 let _statusDB     = {};  // { bildId: "vergeben" }
+let _lieblinge    = {};  // { nutzername: bildId }
 let _unsubInter   = null;
 let _unsubStatus  = null;
+let _unsubLieb    = null;
 
 // ── Hilfsfunktionen ───────────────────────────────────────────
 function zeige(id)   { document.getElementById(id).style.display = ''; }
@@ -582,6 +709,7 @@ function abmelden() {
   window._currentUser = null;
   if (_unsubInter)  { _unsubInter();  _unsubInter  = null; }
   if (_unsubStatus) { _unsubStatus(); _unsubStatus = null; }
+  if (_unsubLieb)   { _unsubLieb();   _unsubLieb   = null; }
   document.getElementById('galerie').style.display = 'none';
   document.getElementById('loginBereich').style.display = 'flex';
   document.getElementById('nameInput').value = '';
@@ -611,6 +739,7 @@ function starteGalerie() {
 
     karte.innerHTML = `
       <img src="${b.foto}" alt="${b.descr}" loading="lazy"
+           onclick="lbOeffnen('${b.id}')"
            onerror="this.style.background='#e8e0d0';this.alt='Bild nicht gefunden'">
       <div class="bildInfo">
         <div class="bildDescr">${b.descr}</div>
@@ -621,7 +750,8 @@ function starteGalerie() {
           <span class="leer">Noch kein Interesse</span>
         </div>
         <button class="herzBtn" id="herz_${b.id}"
-                onclick="toggleInteresse('${b.id}')">♡</button>
+                onclick="toggleInteresse('${b.id}')"
+                ondblclick="toggleLiebling('${b.id}')">♡</button>
       </div>`;
     grid.appendChild(karte);
   });
@@ -634,6 +764,10 @@ function starteGalerie() {
   _unsubStatus = window._ladeStatus(data => {
     _statusDB = data;
     aktualisiereStatusUI();
+  });
+  _unsubLieb = window._listenLieblinge(data => {
+    _lieblinge = data;
+    aktualisiereGalerieUI();
   });
 }
 
@@ -648,12 +782,27 @@ function aktualisiereGalerieUI() {
     if (nutzer.length === 0) {
       interEl.innerHTML = '<span class="leer">Noch kein Interesse</span>';
     } else {
-      interEl.innerHTML = `<span class="namen">${nutzer.join(', ')}</span>`;
+      const namen = nutzer.map(n => {
+        const istLiebling = _lieblinge[n] === b.id;
+        return istLiebling ? `<span style="color:#b8860b;font-weight:600">${n} ♥♥</span>` : n;
+      }).join(', ');
+      interEl.innerHTML = `<span class="namen">${namen}</span>`;
     }
 
     const meins = nutzer.includes(user);
-    herzEl.textContent = meins ? '♥' : '♡';
-    herzEl.classList.toggle('aktiv', meins);
+    const liebling = _lieblinge[user] === b.id;
+    if (liebling) {
+      herzEl.textContent = '♥♥';
+      herzEl.classList.remove('aktiv');
+      herzEl.classList.add('liebling');
+    } else if (meins) {
+      herzEl.textContent = '♥';
+      herzEl.classList.add('aktiv');
+      herzEl.classList.remove('liebling');
+    } else {
+      herzEl.textContent = '♡';
+      herzEl.classList.remove('aktiv', 'liebling');
+    }
   });
 }
 
@@ -669,6 +818,11 @@ function aktualisiereStatusUI() {
 async function toggleInteresse(bildId) {
   if (!window._currentUser) return;
   await window._toggleInteresse(bildId, window._currentUser);
+}
+
+async function toggleLiebling(bildId) {
+  if (!window._currentUser) return;
+  await window._toggleLiebling(bildId, window._currentUser);
 }
 
 // ── Admin-Panel aufbauen ──────────────────────────────────────
@@ -704,7 +858,10 @@ function aktualisiereAdminUI() {
 
     const badges = nutzer.length === 0
       ? '<span style="opacity:.5;font-style:italic">–</span>'
-      : nutzer.map(n => `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}</span>`).join('');
+      : nutzer.map(n => {
+          const istLiebling = Object.entries(_lieblinge).some(([k,v]) => k===n && v===b.id);
+          return `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}${istLiebling ? ' ♥♥' : ''}</span>`;
+        }).join('');
 
     const btn = vergeben
       ? `<button class="btnReaktivieren" onclick="reaktiviere('${b.id}')">Reaktivieren</button>`
@@ -727,7 +884,61 @@ async function vergebeAdmin(bildId) {
   await window._markiereVergeben(bildId);
 }
 
-async function reaktiviere(bildId) {
+// ── Lightbox ──────────────────────────────────────────────────
+let _lbIndex = 0;
+let _lbBilder = [];
+
+function lbOeffnen(bildId) {
+  // Nur aktive Bilder in die Liste
+  _lbBilder = window._bilder.filter(b =>
+    b.status !== 'vergeben' && _statusDB[b.id] !== 'vergeben'
+  );
+  _lbIndex = _lbBilder.findIndex(b => b.id === bildId);
+  if (_lbIndex < 0) return;
+  lbZeige();
+  document.getElementById('lightbox').classList.add('aktiv');
+  document.body.style.overflow = 'hidden';
+}
+
+function lbZeige() {
+  const b = _lbBilder[_lbIndex];
+  const img = document.getElementById('lbImg');
+  const info = document.getElementById('lbInfo');
+  img.src = b.foto;
+  img.alt = b.descr;
+  info.innerHTML = b.descr + '<small>' + b.groesse + ' · ' + b.jahr + '</small>';
+  document.getElementById('lbVorige').style.visibility   = _lbIndex > 0 ? 'visible' : 'hidden';
+  document.getElementById('lbNaechste').style.visibility = _lbIndex < _lbBilder.length - 1 ? 'visible' : 'hidden';
+}
+
+function lbBlättern(richtung) {
+  _lbIndex += richtung;
+  if (_lbIndex < 0) _lbIndex = 0;
+  if (_lbIndex >= _lbBilder.length) _lbIndex = _lbBilder.length - 1;
+  lbZeige();
+}
+
+function lbSchliessen() {
+  document.getElementById('lightbox').classList.remove('aktiv');
+  document.body.style.overflow = '';
+}
+
+function lbHintergrundKlick(e) {
+  if (e.target === document.getElementById('lightbox') ||
+      e.target === document.getElementById('lbImg') === false &&
+      e.target.id === 'lightbox') {
+    lbSchliessen();
+  }
+}
+
+// Tastatursteuerung
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('aktiv')) return;
+  if (e.key === 'ArrowLeft')  lbBlättern(-1);
+  if (e.key === 'ArrowRight') lbBlättern(+1);
+  if (e.key === 'Escape')     lbSchliessen();
+});
+
   // Löscht den vergeben-Status aus Firestore
   const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
   await deleteDoc(doc(window._db, "status", bildId));
