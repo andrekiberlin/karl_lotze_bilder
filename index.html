@@ -36,20 +36,20 @@
   // ─────────────────────────────────────────────────────────────
   window._bilder = [
   { id: "b01", descr: "Porträt Elisabeth", groesse: "00×00 cm", jahr: "1936", foto: "fotos/karl_lotze_1.jpg", status: "aktiv" },
-  { id: "b02", descr: "Porträt Annemarthe", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_12.jpg", status: "aktiv" },
-  { id: "b03", descr: "Porträit Doris", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_13.jpg", status: "aktiv" },
-  { id: "b04", descr: "Portrait Barbara", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_14.jpg", status: "aktiv" },
-  { id: "b05", descr: "2 Tannen, Bleistiftzeichnung", groesse: "00×00 cm", jahr: "1911", foto: "fotos/karl_lotze_15.jpg", status: "aktiv" },
-  { id: "b06", descr: "Landschaft Vaake", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_2.jpg", status: "aktiv" },
-  { id: "b07", descr: "Nachthimmel hinter Bäumen (von Elisabeth)", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_3.jpg", status: "aktiv" },
-  { id: "b08", descr: "Hirsch-Trio1", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_4.jpg", status: "aktiv" },
-  { id: "b09", descr: "Im Reinhardswald, grün-braun", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_5.jpg", status: "aktiv" },
-  { id: "b10", descr: "Blumenstrauß", groesse: "00×00 cm", jahr: "1961", foto: "fotos/karl_lotze_6.jpg", status: "aktiv" },
-  { id: "b11", descr: "Pferdefuhrwerk", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_7.jpg", status: "aktiv" },
-  { id: "b12", descr: "Waldakquarell Sommer", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_8.jpg", status: "aktiv" },
-  { id: "b13", descr: "Blick auf Lichtung", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_9.jpg", status: "aktiv" },
-  { id: "b14", descr: "Waldakquarell Winter", groesse: "00×00 cm", jahr: "1965", foto: "fotos/karl_lotze_10.jpg", status: "aktiv" },
-  { id: "b15", descr: "Hirsch-Trio2", groesse: "71×82 cm", jahr: "1950", foto: "fotos/karl_lotze_11.jpg", status: "aktiv" }
+  { id: "b02", descr: "Porträt Annemarthe", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_2.jpg", status: "aktiv" },
+  { id: "b03", descr: "Porträit Doris", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_3.jpg", status: "aktiv" },
+  { id: "b04", descr: "Portrait Barbara", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_4.jpg", status: "aktiv" },
+  { id: "b05", descr: "2 Tannen, Bleistiftzeichnung", groesse: "00×00 cm", jahr: "1911", foto: "fotos/karl_lotze_5.jpg", status: "aktiv" },
+  { id: "b06", descr: "Landschaft Vaake", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_6.jpg", status: "aktiv" },
+  { id: "b07", descr: "Nachthimmel hinter Bäumen (von Elisabeth)", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_7.jpg", status: "aktiv" },
+  { id: "b08", descr: "Hirsch-Trio1", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_8.jpg", status: "aktiv" },
+  { id: "b09", descr: "Im Reinhardswald, grün-braun", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_9.jpg", status: "aktiv" },
+  { id: "b10", descr: "Blumenstrauß", groesse: "00×00 cm", jahr: "1961", foto: "fotos/karl_lotze_10.jpg", status: "aktiv" },
+  { id: "b11", descr: "Pferdefuhrwerk", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_11.jpg", status: "aktiv" },
+  { id: "b12", descr: "Waldakquarell Sommer", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_12.jpg", status: "aktiv" },
+  { id: "b13", descr: "Blick auf Lichtung", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_13.jpg", status: "aktiv" },
+  { id: "b14", descr: "Waldakquarell Winter", groesse: "00×00 cm", jahr: "1965", foto: "fotos/karl_lotze_14.jpg", status: "aktiv" },
+  { id: "b15", descr: "Hirsch-Trio2", groesse: "71×82 cm", jahr: "1950", foto: "fotos/karl_lotze_15.jpg", status: "aktiv" }
   ];
 
   // ─────────────────────────────────────────────────────────────
@@ -885,7 +885,6 @@ function aktualisiereGalerieUI() {
 
     const meins = nutzer.includes(user);
     const liebling = _lieblinge[user] === b.id;
-    // Im Auswertungs-Modus: Herz-Buttons ausblenden
     herzEl.style.display = _modus === 'auswertung' ? 'none' : '';
     if (liebling) {
       herzEl.textContent = '♥♥';
