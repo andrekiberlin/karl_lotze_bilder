@@ -36,27 +36,26 @@
   // ─────────────────────────────────────────────────────────────
   window._bilder = [
   { id: "b01", descr: "Porträt Elisabeth", groesse: "00×00 cm", jahr: "1936", foto: "fotos/karl_lotze_1.jpg", status: "aktiv" },
-  { id: "b02", descr: "Porträt Annemarthe", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_8.jpg", status: "aktiv" },
-  { id: "b03", descr: "Porträit Doris", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_9.jpg", status: "aktiv" },
-  { id: "b04", descr: "Portrait Barbara", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_10.jpg", status: "aktiv" },
-  { id: "b05", descr: "2 Tannen, Bleistiftzeichnung", groesse: "00×00 cm", jahr: "1911", foto: "fotos/karl_lotze_11.jpg", status: "aktiv" },
-  { id: "b06", descr: "Landschaft Vaake", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_12.jpg", status: "aktiv" },
-  { id: "b07", descr: "Nachthimmel hinter Bäumen (von Elisabeth)", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_13.jpg", status: "aktiv" },
-  { id: "b08", descr: "Hirsch-Trio1", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_14.jpg", status: "aktiv" },
-  { id: "b09", descr: "Im Reinhardswald, grün-braun", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_15.jpg", status: "aktiv" },
-  { id: "b10", descr: "Blumenstrauß", groesse: "00×00 cm", jahr: "1961", foto: "fotos/karl_lotze_2.jpg", status: "aktiv" },
-  { id: "b11", descr: "Pferdefuhrwerk", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_3.jpg", status: "aktiv" },
-  { id: "b12", descr: "Waldakquarell Sommer", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_4.jpg", status: "aktiv" },
-  { id: "b13", descr: "Blick auf Lichtung", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_5.jpg", status: "aktiv" },
-  { id: "b14", descr: "Waldakquarell Winter", groesse: "00×00 cm", jahr: "1965", foto: "fotos/karl_lotze_6.jpg", status: "aktiv" },
-  { id: "b15", descr: "Hirsch-Trio2", groesse: "71×82 cm", jahr: "1950", foto: "fotos/karl_lotze_7.jpg", status: "aktiv" }
+  { id: "b07", descr: "Porträt Annemarthe", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_2.jpg", status: "aktiv" },
+  { id: "b08", descr: "Porträit Doris", groesse: "00×00 cm", jahr: "1926", foto: "fotos/karl_lotze_3.jpg", status: "aktiv" },
+  { id: "b09", descr: "2 Tannen, Bleistiftzeichnung", groesse: "00×00 cm", jahr: "1911", foto: "fotos/karl_lotze_4.jpg", status: "aktiv" },
+  { id: "b10", descr: "Portrait Barbara", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_5.jpg", status: "aktiv" },
+  { id: "b11", descr: "Landschaft Vaake", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_6.jpg", status: "aktiv" },
+  { id: "b12", descr: "Nachthimmel hinter Bäumen (von Elisabeth)", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_7.jpg", status: "aktiv" },
+  { id: "b13", descr: "Hirsch-Trio", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_8.jpg", status: "aktiv" },
+  { id: "b14", descr: "Im Reinhardswald, grün-braun", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_9.jpg", status: "aktiv" },
+  { id: "b02", descr: "Blumenstrauß", groesse: "00×00 cm", jahr: "1961", foto: "fotos/karl_lotze_10.jpg", status: "aktiv" },
+  { id: "b03", descr: "Pferdefuhrwerk", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_11.jpg", status: "aktiv" },
+  { id: "b04", descr: "Waldakquarell Sommer", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_12.jpg", status: "aktiv" },
+  { id: "b05", descr: "Blick auf Lichtung", groesse: "00×00 cm", jahr: "19XX", foto: "fotos/karl_lotze_13.jpg", status: "aktiv" },
+  { id: "b06", descr: "Waldakquarell Winter", groesse: "00×00 cm", jahr: "1965", foto: "fotos/karl_lotze_14.jpg", status: "aktiv" },
     // → weitere Bilder nach demselben Schema einfügen
   ];
 
   // ─────────────────────────────────────────────────────────────
   // SCHRITT 3: Admin-Passwort – ändern!
   // ─────────────────────────────────────────────────────────────
-  window._adminPasswort = "lotze2026admin";
+  window._adminPasswort = "lotze2024";
 
   // ── ab hier nichts mehr ändern ────────────────────────────────
 
@@ -413,21 +412,84 @@
   #adminPanel {
     display: none;
     padding: 2rem;
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
+  }
+  /* Titelzeile: h2 links, Zurück-Link rechts – gleiche Höhe */
+  .adminTitelzeile {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.3rem;
+    gap: 1rem;
   }
   #adminPanel h2 {
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
     font-weight: 400;
-    margin-bottom: 0.3rem;
     color: var(--dark);
+    margin: 0;
   }
+  .adminZurueck {
+    font-size: 0.85rem;
+    color: var(--mid);
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color .2s, color .2s;
+    white-space: nowrap;
+  }
+  .adminZurueck:hover { color: var(--dark); border-bottom-color: var(--mid); }
   #adminPanel .sub {
     color: var(--mid);
-    margin-bottom: 2rem;
+    margin-bottom: 1.8rem;
     font-size: 0.9rem;
   }
+  /* ModusBox: farbig je nach Modus, Taste weiß */
+  #modusBox {
+    margin-bottom: 1.8rem;
+    padding: 1.4rem 1.8rem;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    transition: background .4s, border-color .4s;
+  }
+  #modusBox.abstimmung {
+    background: #e8f4e8;
+    border: 1.5px solid #5a9a5a;
+  }
+  #modusBox.auswertung {
+    background: #fef3e2;
+    border: 1.5px solid var(--sepia);
+  }
+  #modusLabel {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 0.3rem;
+  }
+  #modusBox.abstimmung #modusLabel { color: #2d6a2d; }
+  #modusBox.auswertung #modusLabel { color: #8b5e1a; }
+  #modusText {
+    font-size: 0.85rem;
+  }
+  #modusBox.abstimmung #modusText { color: #4a7a4a; }
+  #modusBox.auswertung #modusText { color: var(--mid); }
+  #modusBtn {
+    background: white;
+    border: 1.5px solid currentColor;
+    font-size: 0.82rem;
+    padding: 0.55rem 1.2rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  #modusBox.abstimmung #modusBtn { color: #2d6a2d; }
+  #modusBox.abstimmung #modusBtn:hover { background: #d0ead0; }
+  #modusBox.auswertung #modusBtn { color: #8b5e1a; }
+  #modusBox.auswertung #modusBtn:hover { background: #fde8c0; }
 
   .adminTabelle {
     width: 100%;
@@ -493,14 +555,7 @@
   }
   .adminHinweis strong { color: var(--dark); }
 
-  .zurueckBtn {
-    background: transparent;
-    border: 1.5px solid var(--mid);
-    color: var(--mid);
-    margin-bottom: 1.5rem;
-    font-size: 0.82rem;
-  }
-  .zurueckBtn:hover { background: var(--light); }
+
 
   /* ── Admin-Login ── */
   #adminLogin { display: none; }
@@ -633,8 +688,8 @@
     <a style="cursor:pointer;color:var(--mid);font-size:0.85rem" onclick="abmelden()">Abmelden</a>
   </div>
   <div class="runden-info">
-    <strong>Interesse:</strong> Klicke auf ♡ um ein Bild zu markieren (♥ rot) – nochmals klicken hebt die Markierung auf.<br>
-    <strong>Lieblingsbild:</strong> Doppelklicke auf ♡ oder ♥ um dein Lieblingsbild zu wählen (♥♥ gold) – Du kannst nur ein Lieblingsbild wählen. Nochmals doppelklicken macht es rückgängig (♥ rot). Nochmals klicken hebt die Markierung auf.<br>
+    <strong>Interesse:</strong> Klicke auf ♡ um ein Bild zu markieren – nochmals klicken hebt die Markierung auf.<br>
+    <strong>Lieblingsbild:</strong> Doppelklicke auf ♡ oder ♥ um dein Lieblingsbild zu wählen (♥♥ gold) – nur eines möglich. Nochmals doppelklicken macht es rückgängig.<br>
     <strong>Vergrößern:</strong> Klicke auf das Bild selbst, um es groß anzuzeigen.<br>
     <strong>Hinweis:</strong> Deine Auswahl wird gespeichert, aber erst nach Abschluss der Runde für alle sichtbar gemacht.
   </div>
@@ -643,16 +698,18 @@
 
 <!-- ── Admin-Panel ── -->
 <div id="adminPanel">
-  <button class="zurueckBtn" onclick="zeigeLogin()">← Zurück zur Galerie</button>
-  <h2>Adminansicht</h2>
+  <div class="adminTitelzeile">
+    <h2>Adminansicht</h2>
+    <a class="adminZurueck" onclick="zeigeLogin()">← Zurück zur Useransicht</a>
+  </div>
   <p class="sub">Übersicht aller Bilder mit Interessenten. Vergib Bilder nach jeder Runde.</p>
 
-  <div id="modusBox" style="margin-bottom:1.8rem; padding:1.2rem 1.5rem; background:white; border:1px solid var(--sepia); border-radius:var(--radius); display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+  <div id="modusBox" class="abstimmung">
     <div>
-      <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.25rem;">Sichtbarkeits-Modus</div>
-      <div id="modusText" style="font-size:0.85rem; color:var(--mid);"></div>
+      <div id="modusLabel">Sichtbarkeits-Modus</div>
+      <div id="modusText"></div>
     </div>
-    <button id="modusBtn" onclick="wechsleModus()" style="white-space:nowrap; padding:0.6rem 1.4rem; font-size:0.85rem;"></button>
+    <button id="modusBtn" onclick="wechsleModus()"></button>
   </div>
   <table class="adminTabelle">
     <thead>
@@ -817,8 +874,12 @@ function aktualisiereGalerieUI() {
     } else {
       const namen = sichtbar.map(n => {
         const istLiebling = _lieblinge[n] === b.id;
-        return istLiebling ? `<span style="color:#b8860b;font-weight:600">${n} ♥♥</span>` : n;
-      }).join(', ');
+        if (istLiebling) {
+          return `<span style="color:#b8860b;font-weight:600">${n} <span style="font-size:0.75em">♥♥</span></span>`;
+        } else {
+          return `${n} <span style="color:var(--accent);font-size:0.85em">♥</span>`;
+        }
+      }).join('<span style="color:var(--mid);margin:0 0.2em">·</span>');
       interEl.innerHTML = `<span class="namen">${namen}</span>`;
     }
 
@@ -904,7 +965,10 @@ function aktualisiereAdminUI() {
       ? '<span style="opacity:.5;font-style:italic">–</span>'
       : nutzer.map(n => {
           const istLiebling = Object.entries(_lieblinge).some(([k,v]) => k===n && v===b.id);
-          return `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}${istLiebling ? ' ♥♥' : ''}</span>`;
+          const herz = istLiebling
+            ? ' <span style="color:#b8860b;font-size:0.85em">♥♥</span>'
+            : ' <span style="color:var(--accent);font-size:0.85em">♥</span>';
+          return `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}${herz}</span>`;
         }).join('');
 
     const btn = vergeben
@@ -926,15 +990,16 @@ function aktualisiereAdminUI() {
 function aktualisiereModusUI() {
   const btn  = document.getElementById('modusBtn');
   const text = document.getElementById('modusText');
-  if (!btn || !text) return;
+  const box  = document.getElementById('modusBox');
+  if (!btn || !text || !box) return;
   if (_modus === 'abstimmung') {
-    text.textContent = 'Abstimmungsphase: Nutzer sehen nur ihre eigene Auswahl.';
+    box.className = 'abstimmung';
+    text.textContent = 'Abstimmungsphase aktiv – Nutzer sehen nur ihre eigene Auswahl.';
     btn.textContent  = 'Auswertung freigeben →';
-    btn.style.background = '#2d6a2d';
   } else {
-    text.textContent = 'Auswertungsphase: Alle Präferenzen sind für alle sichtbar.';
+    box.className = 'auswertung';
+    text.textContent = 'Auswertungsphase aktiv – alle Präferenzen sind für alle sichtbar.';
     btn.textContent  = '← Zurück zur Abstimmung';
-    btn.style.background = 'var(--accent)';
   }
 }
 
