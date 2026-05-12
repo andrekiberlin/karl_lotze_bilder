@@ -671,9 +671,9 @@
 </div>
 
 <!-- ── Admin-Login ── -->
-<div id="adminLogin">
-  <div id="loginBereich" style="display:flex">
-    <h2>Admin-Zugang</h2>
+<div id="adminLogin" style="display:none">
+  <div id="adminLoginBereich" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; padding:2rem; gap:1.2rem;">
+    <h2 style="font-family:'Playfair Display',serif; font-weight:400; font-size:1.6rem; color:var(--mid);">Admin-Zugang</h2>
     <input type="password" id="adminPwInput" placeholder="Passwort"
            onkeydown="if(event.key==='Enter') adminLogin()">
     <button onclick="adminLogin()">Anmelden</button>
@@ -768,9 +768,6 @@ function zeigeAdminLogin() {
   verberge('galerie');
   verberge('adminPanel');
   document.getElementById('adminLogin').style.display = 'block';
-  // Der innere loginBereich in adminLogin:
-  document.querySelector('#adminLogin #loginBereich') &&
-    (document.querySelector('#adminLogin #loginBereich').style.display = 'flex');
 }
 
 function login() {
@@ -793,6 +790,8 @@ function abmelden() {
   if (_unsubLieb)   { _unsubLieb();   _unsubLieb   = null; }
   if (_unsubModus)  { _unsubModus();  _unsubModus  = null; }
   document.getElementById('galerie').style.display = 'none';
+  verberge('adminPanel');
+  verberge('adminLogin');
   document.getElementById('loginBereich').style.display = 'flex';
   document.getElementById('nameInput').value = '';
 }
