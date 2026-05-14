@@ -110,7 +110,7 @@
     }
   };
 
-  // Sichtbarkeits-Modus: "abstimmung" (Standard) oder "auswertung"
+  // Auswertungsmodus: "abstimmung" (Standard) oder "auswertung"
   // Archivdaten pro Bild speichern und laden
   window._speichereArchiv = async (bildId, daten) => {
     await setDoc(doc(db, "archiv", bildId), daten, { merge: true });
@@ -747,7 +747,7 @@
 
   <div id="modusBox" class="abstimmung">
     <div>
-      <div id="modusLabel">Sichtbarkeits-Modus</div>
+      <div id="modusLabel">Auswertungsmodus</div>
       <div id="modusText"></div>
     </div>
     <button id="modusBtn" onclick="wechsleModus()"></button>
@@ -769,7 +769,7 @@
     <strong>Vergeben markieren:</strong> Ein als „Vergeben" markiertes Bild verschwindet sofort aus der Galerie aller Nutzer.
     Um es dauerhaft aus der nächsten Runde zu entfernen, ändere <code>status</code> in <code>window._bilder</code>
     auf <code>"vergeben"</code> und push die Datei neu auf GitHub.<br><br>
-    <strong>Sichtbarkeits-Modus:</strong> Im Abstimmungs-Modus sieht jeder Nutzer nur seine eigene Auswahl.
+    <strong>Auswertungsmodus:</strong> Im Abstimmungs-Modus sieht jeder Nutzer nur seine eigene Auswahl.
     Erst wenn du auf „Auswertung freigeben" klickst, werden alle Präferenzen für alle sichtbar.
   </div>
 </div>
