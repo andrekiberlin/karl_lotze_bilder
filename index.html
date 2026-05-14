@@ -83,10 +83,12 @@
     await setDoc(ref, { nutzer: interessenten }, { merge: true });
   };
 
-  // Admin: Bild als vergeben markieren (nur lokal, du musst HTML-Datei dann anpassen)
-  window._markiereVergeben = async (bildId) => {
-    // Speichert den Status auch in Firestore als Referenz
-    await setDoc(doc(db, "status", bildId), { status: "vergeben" }, { merge: true });
+  // Admin: Bild als zugeteilt markieren (über archiv-Collection)
+  window._markiereZugeteilt = async (bildId) => {
+    await setDoc(doc(db, "archiv", bildId), { zugeteilt: true }, { merge: true });
+  };
+  window._reaktiviereZugeteilt = async (bildId) => {
+    await setDoc(doc(db, "archiv", bildId), { zugeteilt: false }, { merge: true });
   };
 
   // Lieblingsbild setzen/entfernen (pro Nutzer nur eines)
@@ -141,10 +143,12 @@
     });
   };
 
-  window._ladeStatus = async (callback) => {
-    return onSnapshot(collection(db, "status"), (snap) => {
+  // Status wird jetzt direkt aus _archiv gelesen (kein separater listener nötig)
+  // _ladeStatus bleibt als Stub erhalten um Kompatibilität zu wahren
+  window._ladeStatus = (callback) => {
+    return onSnapshot(collection(db, "archiv"), (snap) => {
       const data = {};
-      snap.forEach(d => { data[d.id] = d.data().status; });
+      snap.forEach(d => { data[d.id] = d.data(); });
       callback(data);
     });
   };
@@ -856,7 +860,9 @@ function starteGalerie() {
   grid.innerHTML = '';
 
   window._bilder.forEach(b => {
-    if (b.status === 'vergeben') return;  // Vergebene Bilder gar nicht rendern
+    // Bilder die zugeteilt UND zur Weitergabe bestimmt sind, nicht rendern
+    const _a = _archiv[b.id] || {};
+    if (_a.weitergabe && _a.zugeteilt) return;
     const karte = document.createElement('div');
     karte.className = 'bildKarte';
     karte.id = 'karte_' + b.id;
@@ -886,7 +892,8 @@ function starteGalerie() {
     aktualisiereGalerieUI();
   });
   _unsubStatus = window._ladeStatus(data => {
-    _statusDB = data;
+    // data enthält jetzt volle archiv-Dokumente
+    // _archiv wird bereits separat befüllt; hier nur UI aktualisieren
     aktualisiereStatusUI();
   });
   _unsubLieb = window._listenLieblinge(data => {
@@ -947,9 +954,10 @@ function aktualisiereStatusUI() {
   window._bilder.forEach(b => {
     const karte = document.getElementById('karte_' + b.id);
     if (!karte) return;
-    const vergeben = _statusDB[b.id] === 'vergeben';
-    // Wenn in Firestore als vergeben markiert: Karte ausblenden
-    karte.style.display = vergeben ? 'none' : '';
+    const archivDaten = _archiv[b.id] || {};
+    // Bild ausblenden wenn: zugeteilt=true UND weitergabe=true
+    const ausblenden = archivDaten.weitergabe && archivDaten.zugeteilt;
+    karte.style.display = ausblenden ? 'none' : '';
   });
 }
 
@@ -1004,11 +1012,12 @@ function aktualisiereAdminUI() {
 
   window._bilder.forEach((b, i) => {
     const nutzer   = (_interessen[b.id] && _interessen[b.id].nutzer) || [];
-    const vergeben = b.status === 'vergeben' || _statusDB[b.id] === 'vergeben';
+    const a0 = _archiv[b.id] || {};
+    const zugeteilt = a0.weitergabe && a0.zugeteilt;
     const konflikt = nutzer.length > 1;
 
     const tr = document.createElement('tr');
-    if (vergeben) tr.classList.add('vergeben');
+    if (zugeteilt) tr.classList.add('vergeben');
 
     const badges = nutzer.length === 0
       ? '<span style="opacity:.5;font-style:italic">–</span>'
@@ -1020,9 +1029,13 @@ function aktualisiereAdminUI() {
           return `<span class="tagBadge ${konflikt ? 'konflikt' : ''}">${n}${herz}</span>`;
         }).join('');
 
-    const btn = vergeben
-      ? `<button class="btnReaktivieren" onclick="reaktiviere('${b.id}')">Reaktivieren</button>`
-      : `<button class="btnVergeben"     onclick="vergebeAdmin('${b.id}')">Vergeben</button>`;
+    const a0check = _archiv[b.id] || {};
+    let btn = '';
+    if (a0check.weitergabe) {
+      btn = a0check.zugeteilt
+        ? `<button class="btnReaktivieren" onclick="reaktiviere('${b.id}')">Reaktivieren</button>`
+        : `<button class="btnVergeben"     onclick="zugeteiltAdmin('${b.id}')">Zuteilen</button>`;
+    }
 
     const a = _archiv[b.id] || {};
     const archivFelder = `
@@ -1061,7 +1074,7 @@ function aktualisiereAdminUI() {
       <td><strong>${b.descr}</strong></td>
       <td>${badges || '<span style="opacity:.5;font-style:italic">–</span>'}</td>
       <td>${archivFelder}</td>
-      <td style="white-space:nowrap">${vergeben ? '<em style="opacity:.5">Vergeben</em><br>' : ''}${btn}</td>`;
+      <td style="white-space:nowrap">${zugeteilt ? '<em style="opacity:.5;font-size:0.8rem">Zugeteilt</em><br>' : ''}${btn}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1091,9 +1104,11 @@ async function speichereArchivFeld(bildId, feld, wert) {
   await window._speichereArchiv(bildId, { [feld]: wert });
 }
 
-async function vergebeAdmin(bildId) {
-  if (!confirm('Dieses Bild als „Vergeben" markieren?')) return;
-  await window._markiereVergeben(bildId);
+async function zugeteiltAdmin(bildId) {
+  const b = window._bilder.find(x => x.id === bildId);
+  const name = b ? b.descr : bildId;
+  if (!confirm(`„${name}" zuteilen?`)) return;
+  await window._markiereZugeteilt(bildId);
 }
 
 // ── Lightbox ──────────────────────────────────────────────────
@@ -1102,9 +1117,10 @@ let _lbBilder = [];
 
 function lbOeffnen(bildId) {
   // Nur aktive Bilder in die Liste
-  _lbBilder = window._bilder.filter(b =>
-    b.status !== 'vergeben' && _statusDB[b.id] !== 'vergeben'
-  );
+  _lbBilder = window._bilder.filter(b => {
+    const a = _archiv[b.id] || {};
+    return !(a.weitergabe && a.zugeteilt);
+  });
   _lbIndex = _lbBilder.findIndex(b => b.id === bildId);
   if (_lbIndex < 0) return;
   lbZeige();
