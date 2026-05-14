@@ -111,6 +111,18 @@
   };
 
   // Sichtbarkeits-Modus: "abstimmung" (Standard) oder "auswertung"
+  // Archivdaten pro Bild speichern und laden
+  window._speichereArchiv = async (bildId, daten) => {
+    await setDoc(doc(db, "archiv", bildId), daten, { merge: true });
+  };
+  window._listenArchiv = (callback) => {
+    return onSnapshot(collection(db, "archiv"), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data(); });
+      callback(data);
+    });
+  };
+
   window._listenModus = (callback) => {
     return onSnapshot(doc(db, "einstellungen", "modus"), (snap) => {
       const modus = snap.exists() ? (snap.data().modus || "abstimmung") : "abstimmung";
@@ -543,6 +555,37 @@
     white-space: nowrap;
   }
 
+  .archivGrid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.7rem;
+    align-items: center;
+    font-size: 0.78rem;
+  }
+  .archivGrid label {
+    color: var(--mid);
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .archivGrid input[type="text"],
+  .archivGrid select,
+  .archivGrid textarea {
+    width: 100%;
+    min-width: 140px;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--light);
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    color: var(--dark);
+    background: var(--cream);
+  }
+  .archivGrid textarea { resize: vertical; }
+  .archivGrid input[type="checkbox"] { width: auto; }
+
   .adminHinweis {
     margin-top: 2rem;
     padding: 1rem 1.5rem;
@@ -715,8 +758,8 @@
         <th>#</th>
         <th>Bild</th>
         <th>Beschreibung</th>
-        <th>Größe / Jahr</th>
         <th>Interessenten</th>
+        <th>Archivdaten</th>
         <th>Aktion</th>
       </tr>
     </thead>
@@ -746,10 +789,12 @@ let _interessen   = {};  // { bildId: { nutzer: ["Anna","Bob"] } }
 let _statusDB     = {};  // { bildId: "vergeben" }
 let _lieblinge    = {};  // { nutzername: bildId }
 let _modus        = "abstimmung";  // "abstimmung" oder "auswertung"
+let _archiv       = {};  // { bildId: { besitzer, seit, ... } }
 let _unsubInter   = null;
 let _unsubStatus  = null;
 let _unsubLieb    = null;
 let _unsubModus   = null;
+let _unsubArchiv  = null;
 
 // ── Hilfsfunktionen ───────────────────────────────────────────
 function zeige(id)   { document.getElementById(id).style.display = ''; }
@@ -942,6 +987,12 @@ function starteAdmin() {
       aktualisiereModusUI();
     });
   }
+  if (!_unsubArchiv) {
+    _unsubArchiv = window._listenArchiv(data => {
+      _archiv = data;
+      aktualisiereAdminUI();
+    });
+  }
   aktualisiereAdminUI();
   aktualisiereModusUI();
 }
@@ -973,14 +1024,44 @@ function aktualisiereAdminUI() {
       ? `<button class="btnReaktivieren" onclick="reaktiviere('${b.id}')">Reaktivieren</button>`
       : `<button class="btnVergeben"     onclick="vergebeAdmin('${b.id}')">Vergeben</button>`;
 
+    const a = _archiv[b.id] || {};
+    const archivFelder = `
+      <div class="archivGrid">
+        <label>Aktueller Besitzer</label>
+        <input type="text" value="${a.besitzer||''}" onchange="speichereArchivFeld('${b.id}','besitzer',this.value)" placeholder="–">
+        <label>Seit</label>
+        <input type="text" value="${a.seit||''}" onchange="speichereArchivFeld('${b.id}','seit',this.value)" placeholder="MM/JJJJ">
+        <label>Als Nachfolger notiert</label>
+        <input type="text" value="${a.nachfolger||''}" onchange="speichereArchivFeld('${b.id}','nachfolger',this.value)" placeholder="–">
+        <label>Vorbesitzer</label>
+        <input type="text" value="${a.vorbesitzer||''}" onchange="speichereArchivFeld('${b.id}','vorbesitzer',this.value)" placeholder="–">
+        <label>Standort</label>
+        <input type="text" value="${a.standort||''}" onchange="speichereArchivFeld('${b.id}','standort',this.value)" placeholder="–">
+        <label>Technik</label>
+        <input type="text" value="${a.technik||''}" onchange="speichereArchivFeld('${b.id}','technik',this.value)" placeholder="Öl, Aquarell…">
+        <label>Signiert</label>
+        <select onchange="speichereArchivFeld('${b.id}','signiert',this.value)">
+          <option value="" ${!a.signiert?'selected':''}>–</option>
+          <option value="ja" ${a.signiert==='ja'?'selected':''}>Ja</option>
+          <option value="nein" ${a.signiert==='nein'?'selected':''}>Nein</option>
+        </select>
+        <label>Ausstellungen</label>
+        <input type="text" value="${a.ausstellungen||''}" onchange="speichereArchivFeld('${b.id}','ausstellungen',this.value)" placeholder="–">
+        <label>Kommentar/Notizen</label>
+        <textarea rows="2" onchange="speichereArchivFeld('${b.id}','kommentar',this.value)" placeholder="–">${a.kommentar||''}</textarea>
+        <label>Zur Weitergabe bestimmt</label>
+        <input type="checkbox" ${a.weitergabe?'checked':''} onchange="speichereArchivFeld('${b.id}','weitergabe',this.checked)">
+      </div>`;
+
     tr.innerHTML = `
       <td>${i+1}</td>
       <td><img src="${b.foto}" style="width:60px;height:45px;object-fit:cover;border-radius:2px;background:var(--light)"
-               onerror="this.style.background='#ddd'"></td>
-      <td>${b.descr}</td>
-      <td style="white-space:nowrap">${b.groesse}<br><small>${b.jahr}</small></td>
-      <td>${badges}</td>
-      <td>${vergeben ? '<em style="opacity:.5">Vergeben</em>' : btn}</td>`;
+               onerror="this.style.background='#ddd'"><br>
+          <small style="color:var(--mid);font-size:0.75rem">${b.groesse}<br>${b.jahr}</small></td>
+      <td><strong>${b.descr}</strong></td>
+      <td>${badges || '<span style="opacity:.5;font-style:italic">–</span>'}</td>
+      <td>${archivFelder}</td>
+      <td style="white-space:nowrap">${vergeben ? '<em style="opacity:.5">Vergeben</em><br>' : ''}${btn}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1004,6 +1085,10 @@ function aktualisiereModusUI() {
 async function wechsleModus() {
   const neuerModus = _modus === 'abstimmung' ? 'auswertung' : 'abstimmung';
   await window._setzeModus(neuerModus);
+}
+
+async function speichereArchivFeld(bildId, feld, wert) {
+  await window._speichereArchiv(bildId, { [feld]: wert });
 }
 
 async function vergebeAdmin(bildId) {
